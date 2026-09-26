@@ -261,6 +261,17 @@
                     <button onclick="giveItem()" style="margin-top:10px;background:#6c5ce7;color:#fff;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;width:100%">给玩家物品</button>
                 </div>
                 <div class="dash-card">
+                    <h3>🤖 AI智能助手</h3>
+                    <div id="aiAnalysis" style="font-size:13px;color:#aaa;line-height:1.8;margin-bottom:10px">
+                        正在分析服务器状态...
+                    </div>
+                    <div class="control-btns">
+                        <button onclick="aiOptimize()" style="background:linear-gradient(90deg,#667eea,#764ba2)">一键优化</button>
+                        <button onclick="aiReport()" style="background:#0984e3">生成报告</button>
+                    </div>
+                    <div id="aiLog" style="margin-top:10px;font-size:11px;color:#888;max-height:80px;overflow-y:auto"></div>
+                </div>
+                <div class="dash-card">
                     <h3>数据备份</h3>
                     <button onclick="createBackup()" style="background:#00b894;color:#fff;border:none;padding:10px;border-radius:5px;cursor:pointer;width:100%">立即备份</button>
                     <div id="backupList" style="margin-top:10px">加载中...</div>
@@ -660,7 +671,147 @@
             } catch(e) {}
         }
 
+        // AI助手功能
+        let aiLogEntries = [];
+        
+        function addAiLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            aiLogEntries.unshift(`[${time}] ${msg}`);
+            if (aiLogEntries.length > 20) aiLogEntries.pop();
+            const el = document.getElementById('aiLog');
+            if (el) el.innerHTML = aiLogEntries.map(e => `<div>${e}</div>`).join('');
+        }
+
+        async function aiAnalyze() {
+            try {
+                const status = await apiFetch('/api/status');
+                const stats = await apiFetch('/api/stats').catch(() => ({}));
+                const running = status.running;
+                const cpu = parseFloat(status.system?.cpu) || 0;
+                const mem = parseFloat(status.system?.mem_percent) || 0;
+                const players = status.players || 0;
+                
+                let analysis = '';
+                let suggestions = [];
+                
+                // 健康状态评估
+                if (!running) {
+                    analysis += '🔴 <b>服务器未运行</b><br>';
+                    suggestions.push('立即启动服务器');
+                } else {
+                    analysis += '🟢 <b>服务器运行中</b><br>';
+                }
+                
+                // CPU分析
+                if (cpu > 80) {
+                    analysis += `🟡 CPU使用率${cpu}%，偏高<br>`;
+                    suggestions.push('考虑减少玩家数或降低视距');
+                } else if (cpu > 50) {
+                    analysis += `🟢 CPU使用率${cpu}%，正常<br>`;
+                } else {
+                    analysis += `🟢 CPU使用率${cpu}%，空闲<br>`;
+                }
+                
+                // 内存分析
+                if (mem > 85) {
+                    analysis += `🔴 内存使用率${mem}%，严重不足<br>`;
+                    suggestions.push('立即重启服务器释放内存');
+                    suggestions.push('考虑增加JVM内存分配');
+                } else if (mem > 70) {
+                    analysis += `🟡 内存使用率${mem}%，偏高<br>`;
+                    suggestions.push('建议近期重启服务器');
+                } else {
+                    analysis += `🟢 内存使用率${mem}%，充足<br>`;
+                }
+                
+                // 玩家分析
+                analysis += `👥 当前在线${players}人<br>`;
+                
+                // 综合建议
+                if (suggestions.length > 0) {
+                    analysis += '<br><b style="color:#feca57">💡 建议：</b><br>';
+                    suggestions.forEach((s, i) => {
+                        analysis += `${i+1}. ${s}<br>`;
+                    });
+                } else {
+                    analysis += '<br><b style="color:#00b894">✅ 状态良好，无需操作</b>';
+                }
+                
+                document.getElementById('aiAnalysis').innerHTML = analysis;
+                addAiLog('完成服务器健康分析');
+            } catch(e) {
+                document.getElementById('aiAnalysis').innerHTML = '⚠️ 无法连接服务器，AI分析暂停';
+            }
+        }
+
+        async function aiOptimize() {
+            if (!confirm('AI助手将执行智能优化：清理日志、检查服务、建议重启。确定吗？')) return;
+            addAiLog('开始智能优化...');
+            
+            try {
+                // 清理日志
+                await apiFetch('/api/smart-action', {method: 'POST', body: {action: 'clean-logs'}});
+                addAiLog('已清理过期日志');
+                
+                // 检查所有服务状态
+                const status = await apiFetch('/api/status');
+                if (!status.running) {
+                    addAiLog('检测到服务器未运行，正在启动...');
+                    await apiFetch('/api/start', {method: 'POST'});
+                }
+                
+                // 内存过高建议重启
+                const mem = parseFloat(status.system?.mem_percent) || 0;
+                if (mem > 80 && status.running) {
+                    addAiLog('内存过高，建议智能重启');
+                    if (confirm('内存使用率过高，是否执行智能重启？')) {
+                        await apiFetch('/api/smart-action', {method: 'POST', body: {action: 'restart'}});
+                        addAiLog('已执行智能重启');
+                    }
+                }
+                
+                addAiLog('智能优化完成！');
+                alert('AI智能优化完成！');
+                aiAnalyze();
+                refreshAll();
+            } catch(e) {
+                addAiLog('优化失败：' + e.message);
+                alert('优化失败：' + e.message);
+            }
+        }
+
+        async function aiReport() {
+            try {
+                const data = await apiFetch('/api/smart-action', {method: 'POST', body: {action: 'status-report'}});
+                const r = data.report || {};
+                const report = `
+📊 AI服务器状态报告
+━━━━━━━━━━━━━━━━━
+服务器状态: ${r.server_running ? '🟢 运行中' : '🔴 已停止'}
+在线玩家: ${r.online_players || 0}人
+CPU: ${r.cpu || '0%'}
+内存: ${r.memory || '未知'}
+磁盘: ${r.disk || '0%'}
+━━━━━━━━━━━━━━━━━
+生成时间: ${new Date().toLocaleString()}
+                `;
+                alert(report);
+                addAiLog('已生成状态报告');
+            } catch(e) {
+                alert('生成报告失败：' + e.message);
+            }
+        }
+
         checkStatus();
+        // 登录后启动AI分析
+        const origLogin = doLogin;
+        doLogin = function() {
+            origLogin();
+            if (isAdmin) {
+                setTimeout(aiAnalyze, 1000);
+                setInterval(aiAnalyze, 30000);
+            }
+        };
     </script>
 </body>
 </html>
