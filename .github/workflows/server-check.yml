@@ -1,0 +1,58 @@
+name: 服务器状态巡检
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # 每10分钟检查一次
+  workflow_dispatch:  # 支持手动触发
+
+jobs:
+  check-server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检查MC服务器端口
+        id: mc_check
+        continue-on-error: true
+        run: |
+          echo "检查MC服务器 gz.2.frp.one:8550..."
+          timeout 10 bash -c 'cat < /dev/tcp/gz.2.frp.one/8550' 2>&1 && echo "MC端口开放" || echo "MC端口无法连接"
+          
+      - name: 检查网站状态
+        id: web_check
+        run: |
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 http://sj.frp.one:56768/ || echo "000")
+          echo "网站HTTP状态: $HTTP_CODE"
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "网站正常"
+          else
+            echo "网站异常，状态码: $HTTP_CODE"
+          fi
+          
+      - name: 检查API状态
+        id: api_check
+        run: |
+          API_RESPONSE=$(curl -s --max-time 10 http://sj.frp.one:56768/api/status || echo "{}")
+          echo "API响应: $API_RESPONSE"
+          RUNNING=$(echo "$API_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('running', 'unknown'))" 2>/dev/null || echo "unknown")
+          echo "MC服务器运行状态: $RUNNING"
+          
+      - name: 生成巡检报告
+        run: |
+          echo "## 服务器巡检报告" > report.md
+          echo "" >> report.md
+          echo "巡检时间: $(date '+%Y-%m-%d %H:%M:%S')" >> report.md
+          echo "" >> report.md
+          echo "### 服务状态" >> report.md
+          echo "- 网站: ${{ steps.web_check.outputs.result || '检查中' }}" >> report.md
+          echo "- API: ${{ steps.api_check.outputs.result || '检查中' }}" >> report.md
+          echo "" >> report.md
+          echo "### 访问地址" >> report.md
+          echo "- MC服务器: gz.2.frp.one:8550" >> report.md
+          echo "- 管理面板: http://sj.frp.one:56768/" >> report.md
+          echo "- GitHub网站: https://huang9178.github.io/mc-server-website/" >> report.md
+          cat report.md
+          
+      - name: 上传报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-report
+          path: report.md
