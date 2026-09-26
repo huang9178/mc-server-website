@@ -1,0 +1,159 @@
+{
+  "balloon": {
+    "enabled": false,
+    "centerX": 0,
+    "centerY": 80,
+    "centerZ": 0,
+    "radius": 25,
+    "minY": 110,
+    "maxY": 150,
+    "perDay": 3,
+    "announce": true,
+    "perPlayer": false,
+    "playerInAreaOnly": false,
+    "playerHeight": 40,
+    "playerSpread": 12,
+    "windowStart": 1000,
+    "windowEnd": 2000
+  },
+  "cache": {
+    "announce": true,
+    "cooldownMinutes": 60,
+    "naturalSpawns": true,
+    "naturalOneIn": 3000,
+    "maxOutstanding": 1,
+    "currencyStacksMin": 1,
+    "currencyStacksMax": 3,
+    "currencyPerStackMin": 100,
+    "currencyPerStackMax": 250
+  },
+  "ledger": {
+    "fileLogEnabled": true,
+    "webhookEnabled": false,
+    "webhookUrl": "",
+    "webhookLargeTxnThreshold": 10000
+  },
+  "wealthTax": {
+    "enabled": false,
+    "threshold": 100000,
+    "ratePercent": 1,
+    "intervalMinutes": 1440,
+    "announce": true
+  },
+  "savings": {
+    "enabled": false,
+    "ratePercent": 1,
+    "intervalMinutes": 1440,
+    "maxPerCycle": 1000,
+    "announce": true
+  },
+  "shopRent": {
+    "enabled": false,
+    "baseRent": 100,
+    "perListing": 0,
+    "intervalMinutes": 1440,
+    "graceCycles": 3,
+    "announce": true
+  },
+  "shops": {
+    "adminShops": true,
+    "restock": true,
+    "buyLimits": true,
+    "sellToShops": true,
+    "dynamicPricing": true,
+    "priceSensitivity": 4,
+    "priceFloorPercent": 25,
+    "priceCeilingPercent": 400,
+    "priceSettlePercent": 2
+  },
+  "raffle": {
+    "enabled": false,
+    "ticketPrice": 100,
+    "houseCutPercent": 20,
+    "maxTicketsPerPlayer": 0,
+    "drawIntervalMinutes": 1440,
+    "announce": true,
+    "redeemEnabled": true
+  },
+  "bounty": {
+    "enabled": true,
+    "activeCount": 5,
+    "takeLimit": 3,
+    "durationMinutes": 30,
+    "rewardMultiplierPercent": 100,
+    "maxCoinReward": 250
+  },
+  "crate": {
+    "enabled": true,
+    "keyPrice": 500
+  },
+  "loan": {
+    "enabled": false,
+    "maxDebt": 10000,
+    "interestPercentPerCycle": 5,
+    "intervalMinutes": 1440,
+    "autoCollect": true,
+    "termDays": 7,
+    "lateFeePercent": 10,
+    "overdueInterestPercent": 20,
+    "debtCeilingMultiplier": 3
+  },
+  "gambling": {
+    "enabled": true,
+    "minBet": 10,
+    "maxBet": 1000,
+    "slotsHouseEdgePercent": 22,
+    "coinFlipPayoutPercent": 195,
+    "coinFlipRevealTicks": 30
+  },
+  "enchanter": {
+    "enabled": true,
+    "repairFullCost": 60,
+    "costMultiplierPercent": 100,
+    "costCommon": 15,
+    "costUncommon": 25,
+    "costRare": 45,
+    "costVeryRare": 80,
+    "treasureMultiplierPercent": 200,
+    "extractCost": 25,
+    "extractValuePercent": 100,
+    "allowTreasure": true,
+    "uncraftCost": 30
+  },
+  "currency": {
+    "itemName": "",
+    "payConfirmAbove": 10000,
+    "startingBalance": 0
+  },
+  "waystone": {
+    "enabled": false,
+    "fee": 50,
+    "dimensionalFee": 200,
+    "announce": true
+  },
+  "cosmetic": {
+    "enabled": true
+  },
+  "hud": {
+    "bountyTrackerCorner": "TOP_RIGHT",
+    "bountyTrackerX": 6,
+    "bountyTrackerY": 40,
+    "bountyTrackerScale": 100,
+    "bountyTrackerOpacity": 85,
+    "bountyTrackerTextColour": "FFFFFF",
+    "bountyTrackerBackColour": "000000",
+    "bountyTrackerDoneColour": "55BB55",
+    "bountyTrackerShowBar": true,
+    "bountyTrackerWrap": true
+  },
+  "villagerTrades": {
+    "enabled": true,
+    "chancePercent": 10,
+    "coinsPerEmerald": 3
+  },
+  "auctionListingFeeFlat": 0,
+  "auctionListingFeePercent": 0,
+  "auctionListingFeeMax": 0,
+  "auctionSaleTaxPercent": 0,
+  "auctionSaleTaxMax": 0
+}
