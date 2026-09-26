@@ -249,6 +249,9 @@
                     <div style="margin-top:15px;font-size:14px;color:#aaa" id="serverInfo">
                         状态: 检查中...
                     </div>
+                    <div style="margin-top:10px;font-size:12px;color:#888">
+                        如无法连接，请用<a href="http://sj.frp.one:56768/" target="_blank" style="color:#48dbfb">本地管理面板</a>
+                    </div>
                 </div>
                 <div class="dash-card">
                     <h3>在线玩家</h3>
@@ -391,8 +394,9 @@
         const API_BASE = 'http://sj.frp.one:56768';
         const API_KEY = 'mc-admin-2024-key';
         let isAdmin = false;
+        let useProxy = false; // 是否使用CORS代理（HTTPS页面调用HTTP时需要）
 
-        // 带认证的fetch
+        // 带认证的fetch（支持CORS代理）
         async function apiFetch(url, options = {}) {
             options.headers = options.headers || {};
             options.headers['X-API-Key'] = API_KEY;
@@ -400,8 +404,25 @@
                 options.headers['Content-Type'] = 'application/json';
                 options.body = JSON.stringify(options.body);
             }
-            const res = await fetch(`${API_BASE}${url}`, options);
-            return res.json();
+            
+            // 尝试直连
+            try {
+                const res = await fetch(`${API_BASE}${url}`, options);
+                return res.json();
+            } catch(e) {
+                // 直连失败，尝试CORS代理（HTTPS页面调用HTTP接口时）
+                if (!useProxy) {
+                    useProxy = true;
+                    console.log('直连失败，切换到CORS代理');
+                }
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_BASE + url)}`;
+                const proxyOptions = {...options};
+                // 代理不支持自定义header，用URL参数传递API key
+                const separator = url.includes('?') ? '&' : '?';
+                const proxyUrlWithKey = `https://api.allorigins.win/raw?url=${encodeURIComponent(API_BASE + url + separator + 'api_key=' + API_KEY)}`;
+                const res = await fetch(proxyUrlWithKey, {method: options.method || 'GET', body: options.body});
+                return res.json();
+            }
         }
 
         const particles = document.getElementById('particles');
