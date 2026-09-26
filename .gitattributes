@@ -1,0 +1,6 @@
+# 让GitHub/Gitee不把HTML计为主要语言
+*.html linguist-vendored
+*.htm linguist-vendored
+
+# 标记Python为主要语言
+*.py linguist-detectable
