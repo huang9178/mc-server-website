@@ -224,7 +224,10 @@
     <div class="container">
         <nav class="navbar">
             <div class="logo">🥔 正宗土豆服务器</div>
-            <button class="admin-btn" onclick="showLogin()">管理员登录</button>
+            <div style="display:flex;gap:10px">
+                <button class="admin-btn" onclick="showSettings()">⚙️ 设置</button>
+                <button class="admin-btn" onclick="showLogin()">管理员登录</button>
+            </div>
         </nav>
 
         <div class="hero">
@@ -401,11 +404,25 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h2>⚙️ 服务器设置</h2>
+            <p style="color:#aaa;font-size:13px;margin-bottom:10px">配置你的服务器API地址（云服务器IP或本地穿透地址）</p>
+            <input type="text" id="apiBaseInput" placeholder="例如: http://1.2.3.4:8888">
+            <button onclick="saveSettings()">保存设置</button>
+            <button class="close-btn" onclick="hideSettings()">取消</button>
+            <div style="margin-top:15px;font-size:12px;color:#888">
+                当前API地址: <span id="currentApi" style="color:#48dbfb"></span>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const API_BASE = 'http://sj.frp.one:56768';
+        // 从localStorage读取API地址，默认用本地
+        let API_BASE = localStorage.getItem('api_base') || 'http://sj.frp.one:56768';
         const API_KEY = 'mc-admin-2024-key';
         let isAdmin = false;
-        let useProxy = false; // 是否使用CORS代理（HTTPS页面调用HTTP时需要）
+        let useProxy = false;
 
         // 带认证的fetch（支持CORS代理）
         async function apiFetch(url, options = {}) {
@@ -461,6 +478,25 @@
         }
         function hideLogin() {
             document.getElementById('loginModal').classList.remove('active');
+        }
+
+        function showSettings() {
+            document.getElementById('apiBaseInput').value = API_BASE;
+            document.getElementById('currentApi').textContent = API_BASE;
+            document.getElementById('settingsModal').classList.add('active');
+        }
+        function hideSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+        function saveSettings() {
+            const newBase = document.getElementById('apiBaseInput').value.trim();
+            if (newBase) {
+                API_BASE = newBase.replace(/\/$/, '');
+                localStorage.setItem('api_base', API_BASE);
+                hideSettings();
+                alert('设置已保存！刷新页面生效。');
+                location.reload();
+            }
         }
 
         function doLogin() {
