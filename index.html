@@ -241,8 +241,9 @@
                 <div class="dash-card">
                     <h3>服务器控制</h3>
                     <div class="control-btns">
-                        <button class="btn-start" onclick="startServer()">启动服务器</button>
-                        <button class="btn-stop" onclick="stopServer()">停止服务器</button>
+                        <button class="btn-start" onclick="startServer()">启动</button>
+                        <button class="btn-stop" onclick="stopServer()">停止</button>
+                        <button class="btn-refresh" onclick="smartRestart()">智能重启</button>
                         <button class="btn-refresh" onclick="refreshAll()">刷新</button>
                     </div>
                     <div style="margin-top:15px;font-size:14px;color:#aaa" id="serverInfo">
@@ -254,6 +255,12 @@
                     <ul class="player-list" id="playerList">
                         <li>加载中...</li>
                     </ul>
+                    <button onclick="giveItem()" style="margin-top:10px;background:#6c5ce7;color:#fff;border:none;padding:8px 15px;border-radius:5px;cursor:pointer;width:100%">给玩家物品</button>
+                </div>
+                <div class="dash-card">
+                    <h3>数据备份</h3>
+                    <button onclick="createBackup()" style="background:#00b894;color:#fff;border:none;padding:10px;border-radius:5px;cursor:pointer;width:100%">立即备份</button>
+                    <div id="backupList" style="margin-top:10px">加载中...</div>
                 </div>
                 <div class="dash-card" style="grid-column: 1 / -1">
                     <h3>服务器日志</h3>
@@ -382,7 +389,20 @@
 
     <script>
         const API_BASE = 'http://sj.frp.one:56768';
+        const API_KEY = 'mc-admin-2024-key';
         let isAdmin = false;
+
+        // 带认证的fetch
+        async function apiFetch(url, options = {}) {
+            options.headers = options.headers || {};
+            options.headers['X-API-Key'] = API_KEY;
+            if (options.body && typeof options.body === 'object') {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(options.body);
+            }
+            const res = await fetch(`${API_BASE}${url}`, options);
+            return res.json();
+        }
 
         const particles = document.getElementById('particles');
         for (let i = 0; i < 50; i++) {
@@ -433,19 +453,21 @@
             getLogs();
             getStats();
             getOrders();
+            getBackups();
         }
 
         async function checkStatus() {
             try {
-                const res = await fetch(`${API_BASE}/api/status`);
-                const data = await res.json();
+                const data = await apiFetch('/api/status');
                 const running = data.running;
                 document.getElementById('serverStatus').className = 'status-badge ' + (running ? 'status-online' : 'status-offline');
                 document.getElementById('serverStatus').textContent = running ? '🟢 服务器状态：在线' : '🔴 服务器状态：离线';
+                const sys = data.system || {};
                 document.getElementById('serverInfo').innerHTML = `
                     状态: ${running ? '<span style="color:#00b894">运行中</span>' : '<span style="color:#d63031">已停止</span>'}<br>
-                    端口: 25566<br>
-                    内存: 2GB
+                    在线玩家: ${data.players || 0}人<br>
+                    CPU: ${sys.cpu || '0%'} | 内存: ${sys.mem_percent || '0%'}<br>
+                    端口: 25566
                 `;
             } catch(e) {
                 document.getElementById('serverInfo').innerHTML = '状态: <span style="color:#d63031">无法连接管理面板</span>';
@@ -455,8 +477,8 @@
         async function startServer() {
             if (!confirm('确定要启动服务器吗？')) return;
             try {
-                await fetch(`${API_BASE}/api/start`, {method: 'POST'});
-                alert('启动指令已发送，等待服务器启动...');
+                const data = await apiFetch('/api/start', {method: 'POST'});
+                alert(data.message || '启动指令已发送');
                 setTimeout(refreshAll, 5000);
             } catch(e) {
                 alert('启动失败：' + e.message);
@@ -466,35 +488,84 @@
         async function stopServer() {
             if (!confirm('确定要停止服务器吗？')) return;
             try {
-                await fetch(`${API_BASE}/api/stop`, {method: 'POST'});
-                alert('停止指令已发送');
+                const data = await apiFetch('/api/stop', {method: 'POST'});
+                alert(data.message || '停止指令已发送');
                 setTimeout(refreshAll, 3000);
             } catch(e) {
                 alert('停止失败：' + e.message);
             }
         }
 
+        async function smartRestart() {
+            if (!confirm('智能重启：保存世界→停止→启动，确定吗？')) return;
+            try {
+                const data = await apiFetch('/api/smart-action', {method: 'POST', body: {action: 'restart'}});
+                alert(data.message);
+                setTimeout(refreshAll, 8000);
+            } catch(e) {
+                alert('操作失败：' + e.message);
+            }
+        }
+
+        async function cleanLogs() {
+            try {
+                const data = await apiFetch('/api/smart-action', {method: 'POST', body: {action: 'clean-logs'}});
+                alert(data.message);
+            } catch(e) {
+                alert('操作失败：' + e.message);
+            }
+        }
+
         async function getPlayers() {
             try {
-                const res = await fetch(`${API_BASE}/api/players`);
-                const data = await res.json();
+                const data = await apiFetch('/api/players');
                 const list = document.getElementById('playerList');
                 if (data.players && data.players.length > 0) {
-                    list.innerHTML = data.players.map(p =>
-                        `<li><span>${p.name || p}</span><span style="color:#00b894">在线</span></li>`
-                    ).join('');
+                    list.innerHTML = data.players.slice(0,10).map(p => `
+                        <li>
+                            <span>${p.username || p.name || p}</span>
+                            <span>
+                                ${p.is_online ? '<span style="color:#00b894">在线</span>' : '<span style="color:#888">离线</span>'}
+                                <button onclick="kickPlayer('${p.username || p}')" style="background:#d63031;color:#fff;border:none;padding:2px 8px;border-radius:4px;cursor:pointer;font-size:11px;margin-left:5px">踢</button>
+                            </span>
+                        </li>
+                    `).join('');
                 } else {
-                    list.innerHTML = '<li style="color:#888">暂无玩家在线</li>';
+                    list.innerHTML = '<li style="color:#888">暂无玩家</li>';
                 }
             } catch(e) {
                 document.getElementById('playerList').innerHTML = '<li style="color:#888">无法获取</li>';
             }
         }
 
+        async function kickPlayer(name) {
+            if (!confirm(`确定要踢出玩家 ${name} 吗？`)) return;
+            try {
+                const data = await apiFetch('/api/player/kick', {method: 'POST', body: {username: name}});
+                alert(data.message);
+                getPlayers();
+            } catch(e) {
+                alert('操作失败：' + e.message);
+            }
+        }
+
+        async function giveItem() {
+            const name = prompt('玩家名：');
+            if (!name) return;
+            const item = prompt('物品ID（如diamond）：', 'diamond');
+            if (!item) return;
+            const count = prompt('数量：', '1');
+            try {
+                const data = await apiFetch('/api/player/give', {method: 'POST', body: {username: name, item: item, count: parseInt(count)}});
+                alert(data.message);
+            } catch(e) {
+                alert('操作失败：' + e.message);
+            }
+        }
+
         async function getLogs() {
             try {
-                const res = await fetch(`${API_BASE}/api/logs`);
-                const data = await res.json();
+                const data = await apiFetch('/api/logs');
                 const logBox = document.getElementById('logBox');
                 logBox.textContent = data.logs || '暂无日志';
                 logBox.scrollTop = logBox.scrollHeight;
@@ -507,11 +578,7 @@
             const cmd = document.getElementById('cmdInput').value;
             if (!cmd) return;
             try {
-                await fetch(`${API_BASE}/api/command`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({command: cmd})
-                });
+                await apiFetch('/api/command', {method: 'POST', body: {command: cmd}});
                 document.getElementById('cmdInput').value = '';
                 setTimeout(getLogs, 1000);
             } catch(e) {
@@ -521,13 +588,13 @@
 
         async function getStats() {
             try {
-                const res = await fetch(`${API_BASE}/api/stats`);
-                const data = await res.json();
+                const data = await apiFetch('/api/stats');
+                const s = data.stats || data;
                 document.getElementById('statsInfo').innerHTML = `
-                    总玩家数: ${data.total_players || 0}<br>
-                    总订单数: ${data.total_orders || 0}<br>
-                    总消息数: ${data.total_messages || 0}<br>
-                    运行时间: ${data.uptime || '未知'}
+                    总玩家数: ${s.total_players || 0}<br>
+                    总订单数: ${s.total_orders || 0}<br>
+                    总消息数: ${s.total_messages || 0}<br>
+                    <button onclick="cleanLogs()" style="margin-top:10px;background:#0984e3;color:#fff;border:none;padding:8px 15px;border-radius:5px;cursor:pointer">清理日志</button>
                 `;
             } catch(e) {
                 document.getElementById('statsInfo').innerHTML = '无法获取统计';
@@ -536,11 +603,10 @@
 
         async function getOrders() {
             try {
-                const res = await fetch(`${API_BASE}/api/orders`);
-                const data = await res.json();
+                const data = await apiFetch('/api/orders');
                 if (data.orders && data.orders.length > 0) {
                     document.getElementById('ordersInfo').innerHTML = data.orders.slice(0,5).map(o =>
-                        `<div>${o.player || '未知'} - ${o.item || '商品'} - ${o.status || ''}</div>`
+                        `<div>${o.username || o.player || '未知'} - ${o.item_name || o.item || '商品'} - ${o.status || ''}</div>`
                     ).join('');
                 } else {
                     document.getElementById('ordersInfo').innerHTML = '暂无订单';
@@ -548,6 +614,29 @@
             } catch(e) {
                 document.getElementById('ordersInfo').innerHTML = '无法获取订单';
             }
+        }
+
+        async function createBackup() {
+            if (!confirm('确定要创建服务器备份吗？')) return;
+            try {
+                const data = await apiFetch('/api/backup', {method: 'POST'});
+                alert(data.message);
+                getBackups();
+            } catch(e) {
+                alert('备份失败：' + e.message);
+            }
+        }
+
+        async function getBackups() {
+            try {
+                const data = await apiFetch('/api/backups');
+                const el = document.getElementById('backupList');
+                if (el && data.backups && data.backups.length > 0) {
+                    el.innerHTML = data.backups.slice(0,5).map(b => `<div style="font-size:12px;padding:3px 0">📦 ${b}</div>`).join('');
+                } else if (el) {
+                    el.innerHTML = '<div style="color:#888;font-size:12px">暂无备份</div>';
+                }
+            } catch(e) {}
         }
 
         checkStatus();
