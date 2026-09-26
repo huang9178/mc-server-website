@@ -302,36 +302,47 @@
             </div>
         </div>
 
-        <!-- 动态数据展示 -->
+        <!-- 实时监控 -->
         <div class="live-data" style="background:rgba(255,255,255,0.05);border-radius:20px;padding:30px;margin-bottom:40px;border:1px solid rgba(255,255,255,0.1)">
-            <h2 style="text-align:center;margin-bottom:25px;font-size:24px;">📊 实时数据 <span style="font-size:12px;color:#888">(每30秒自动刷新)</span></h2>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:20px">
-                <div style="background:rgba(0,212,255,0.1);padding:20px;border-radius:10px;text-align:center">
-                    <div style="font-size:12px;color:#888">服务器状态</div>
-                    <div id="liveStatus" style="font-size:24px;font-weight:bold;color:#00d4ff">加载中...</div>
+            <h2 style="text-align:center;margin-bottom:25px;font-size:24px;">📡 实时监控 <span style="font-size:12px;color:#888">(每5秒自动刷新)</span></h2>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:20px">
+                <div style="background:rgba(0,212,255,0.1);padding:15px;border-radius:10px;text-align:center">
+                    <div style="font-size:11px;color:#888">服务器状态</div>
+                    <div id="liveStatus" style="font-size:20px;font-weight:bold;color:#00d4ff">检测中...</div>
                 </div>
-                <div style="background:rgba(0,184,148,0.1);padding:20px;border-radius:10px;text-align:center">
-                    <div style="font-size:12px;color:#888">在线玩家</div>
-                    <div id="livePlayers" style="font-size:24px;font-weight:bold;color:#00b894">0/20</div>
+                <div style="background:rgba(0,184,148,0.1);padding:15px;border-radius:10px;text-align:center">
+                    <div style="font-size:11px;color:#888">在线玩家</div>
+                    <div id="livePlayers" style="font-size:20px;font-weight:bold;color:#00b894">--/20</div>
                 </div>
-                <div style="background:rgba(155,89,182,0.1);padding:20px;border-radius:10px;text-align:center">
-                    <div style="font-size:12px;color:#888">已安装模组</div>
-                    <div id="liveMods" style="font-size:24px;font-weight:bold;color:#9b59b6">--</div>
+                <div style="background:rgba(243,156,18,0.1);padding:15px;border-radius:10px;text-align:center">
+                    <div style="font-size:11px;color:#888">CPU使用率</div>
+                    <div id="liveCPU" style="font-size:20px;font-weight:bold;color:#f39c12">--%</div>
                 </div>
-                <div style="background:rgba(243,156,18,0.1);padding:20px;border-radius:10px;text-align:center">
-                    <div style="font-size:12px;color:#888">游戏版本</div>
-                    <div id="liveVersion" style="font-size:24px;font-weight:bold;color:#f39c12">1.20.1</div>
+                <div style="background:rgba(155,89,182,0.1);padding:15px;border-radius:10px;text-align:center">
+                    <div style="font-size:11px;color:#888">内存使用</div>
+                    <div id="liveMem" style="font-size:20px;font-weight:bold;color:#9b59b6">--%</div>
+                </div>
+                <div style="background:rgba(231,76,60,0.1);padding:15px;border-radius:10px;text-align:center">
+                    <div style="font-size:11px;color:#888">服务器TPS</div>
+                    <div id="liveTPS" style="font-size:20px;font-weight:bold;color:#e74c3c">--</div>
+                </div>
+                <div style="background:rgba(52,152,219,0.1);padding:15px;border-radius:10px;text-align:center">
+                    <div style="font-size:11px;color:#888">已安装模组</div>
+                    <div id="liveMods" style="font-size:20px;font-weight:bold;color:#3498db">--</div>
                 </div>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
                 <div>
-                    <h3 style="margin-bottom:10px;color:#00d4ff">👥 注册玩家</h3>
-                    <div id="playerList" style="font-size:13px;color:#aaa;max-height:150px;overflow-y:auto">加载中...</div>
+                    <h3 style="margin-bottom:10px;color:#00d4ff">👥 玩家列表</h3>
+                    <div id="playerList" style="font-size:13px;color:#aaa;max-height:120px;overflow-y:auto">加载中...</div>
                 </div>
                 <div>
-                    <h3 style="margin-bottom:10px;color:#00d4ff">⚙️ 服务器配置</h3>
-                    <div id="configList" style="font-size:13px;color:#aaa;max-height:150px;overflow-y:auto">加载中...</div>
+                    <h3 style="margin-bottom:10px;color:#00d4ff">📜 最近日志</h3>
+                    <div id="recentLogs" style="font-size:12px;color:#aaa;max-height:120px;overflow-y:auto;font-family:monospace">加载中...</div>
                 </div>
+            </div>
+            <div style="text-align:center;margin-top:15px;font-size:11px;color:#666">
+                最后更新: <span id="lastUpdate">--</span> | 数据源: <span id="dataSource">--</span>
             </div>
         </div>
 
@@ -451,59 +462,99 @@
     </div>
 
     <script>
-        // 动态加载GitHub仓库中的JSON数据
-        async function loadLiveData() {
-            try {
-                // 加载服务器状态
-                const statusRes = await fetch('api-data/server-status.json');
-                if (statusRes.ok) {
-                    const status = await statusRes.json();
-                    document.getElementById('liveStatus').textContent = status.status === 'online' ? '● 在线' : '● 离线';
-                    document.getElementById('liveStatus').style.color = status.status === 'online' ? '#00ff00' : '#ff4444';
-                    document.getElementById('livePlayers').textContent = `${status.players?.online || 0}/${status.players?.max || 20}`;
-                    document.getElementById('liveVersion').textContent = status.version || '1.20.1';
-                }
+        // 实时监控 - 优先调用服务器API，失败则用仓库JSON
+        let API_BASE = localStorage.getItem('api_base') || 'http://tudoumc.fucku.top:56768';
+        const API_KEY = 'mc-admin-2024-key';
+        let isAdmin = false;
 
-                // 加载模组列表
+        async function loadLiveData() {
+            let dataSource = '服务器API';
+            let serverData = null;
+
+            // 1. 优先调用服务器API获取实时数据
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 3000);
+                const res = await fetch(`${API_BASE}/api/status`, {
+                    headers: {'X-API-Key': API_KEY},
+                    signal: controller.signal
+                });
+                clearTimeout(timeout);
+                if (res.ok) {
+                    serverData = await res.json();
+                }
+            } catch(e) {
+                dataSource = '仓库缓存(服务器离线)';
+            }
+
+            // 2. 如果API不可用，加载仓库JSON
+            if (!serverData) {
+                try {
+                    const res = await fetch('api-data/server-status.json');
+                    if (res.ok) serverData = await res.json();
+                } catch(e) {}
+            }
+
+            // 3. 更新显示
+            if (serverData) {
+                const running = serverData.running || serverData.status === 'online';
+                document.getElementById('liveStatus').textContent = running ? '● 运行中' : '● 已停止';
+                document.getElementById('liveStatus').style.color = running ? '#00ff00' : '#ff4444';
+                document.getElementById('livePlayers').textContent = `${serverData.players?.online ?? serverData.players ?? 0}/${serverData.players?.max ?? 20}`;
+
+                const sys = serverData.system || {};
+                document.getElementById('liveCPU').textContent = sys.cpu || '--%';
+                document.getElementById('liveMem').textContent = sys.mem_percent || '--%';
+                document.getElementById('liveTPS').textContent = serverData.tps || '20.0';
+            }
+
+            // 4. 加载模组数量
+            try {
                 const modsRes = await fetch('api-data/mods.json');
                 if (modsRes.ok) {
                     const mods = await modsRes.json();
-                    document.getElementById('liveMods').textContent = mods.count || 0;
+                    document.getElementById('liveMods').textContent = mods.count || '--';
                 }
+            } catch(e) {}
 
-                // 加载玩家列表
+            // 5. 加载玩家列表
+            try {
                 const playersRes = await fetch('api-data/players.json');
                 if (playersRes.ok) {
                     const players = await playersRes.json();
                     const list = players.data || [];
                     document.getElementById('playerList').innerHTML = list.length > 0
-                        ? list.map(p => `<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.1)">👤 ${p.username || p.name || '未知'} ${p.balance !== undefined ? `💰 ${p.balance}` : ''}</div>`).join('')
+                        ? list.map(p => `<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05)">👤 ${p.username || p.name || '未知'} ${p.balance !== undefined ? `<span style="color:#f39c12">💰${p.balance}</span>` : ''}</div>`).join('')
                         : '暂无注册玩家';
                 }
+            } catch(e) {}
 
-                // 加载服务器配置
-                const configRes = await fetch('api-data/server-config.json');
-                if (configRes.ok) {
-                    const config = await configRes.json();
-                    const important = ['server-port', 'max-players', 'gamemode', 'difficulty', 'online-mode', 'motd', 'view-distance'];
-                    document.getElementById('configList').innerHTML = important
-                        .filter(k => config[k])
-                        .map(k => `<div style="padding:3px 0"><span style="color:#888">${k}:</span> ${config[k]}</div>`).join('');
+            // 6. 尝试加载实时日志
+            try {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 3000);
+                const logRes = await fetch(`${API_BASE}/api/logs`, {
+                    headers: {'X-API-Key': API_KEY},
+                    signal: controller.signal
+                });
+                clearTimeout(timeout);
+                if (logRes.ok) {
+                    const logData = await logRes.json();
+                    const logs = (logData.logs || '').split('\n').slice(-8).join('\n');
+                    document.getElementById('recentLogs').textContent = logs || '暂无日志';
                 }
             } catch(e) {
-                console.log('动态数据加载失败:', e);
+                document.getElementById('recentLogs').textContent = '服务器离线，无法获取日志';
             }
+
+            // 更新时间和数据源
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+            document.getElementById('dataSource').textContent = dataSource;
         }
 
-        // 页面加载时执行，每30秒刷新
+        // 每5秒刷新
         loadLiveData();
-        setInterval(loadLiveData, 30000);
-
-        // 从localStorage读取API地址，默认用本地
-        let API_BASE = localStorage.getItem('api_base') || 'http://tudoumc.fucku.top:56768';
-        const API_KEY = 'mc-admin-2024-key';
-        let isAdmin = false;
-        let useProxy = false;
+        setInterval(loadLiveData, 5000);
 
         // 带认证的fetch（支持CORS代理）
         async function apiFetch(url, options = {}) {
